@@ -12,5 +12,6 @@
         <module>gridworker</module>
         <module>gridcore</module>
         <module>gridui</module>
+        <module>grid-web</module>
     </modules>
 </project>
