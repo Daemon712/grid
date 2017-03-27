@@ -1,6 +1,6 @@
 package ru.foobarbaz.grid.transport;
 
-import edu.uci.ics.jung.graph.DirectedGraph;
+import edu.uci.ics.jung.graph.Graph;
 
 import java.util.List;
 import java.util.function.BiFunction;
@@ -8,7 +8,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class PathSerializer<G extends DirectedGraph<V, E>, V, E> implements BiFunction<G, List<E>, String> {
+//Actually it works incorrectly with undirected graphs
+public class PathSerializer<G extends Graph<V, E>, V, E> implements BiFunction<G, List<E>, String> {
 
     private Function<V, String> vertexSerializer;
 

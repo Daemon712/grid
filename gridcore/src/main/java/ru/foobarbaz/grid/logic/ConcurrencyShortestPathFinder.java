@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 public class ConcurrencyShortestPathFinder<G extends Graph<V, E>, V, E> implements ShortestPathFinder<G, V, E> {
     private static final int DESIRED_SUB_TASKS = 8;
+    private static final int EASY_GRAPH_SIZE = 16;
     private ShortestPathFinder<G, V, E> simpleShortestPathFinder;
     private int maxEdgesPerThread;
 
@@ -18,7 +19,7 @@ public class ConcurrencyShortestPathFinder<G extends Graph<V, E>, V, E> implemen
 
     @Override
     public List<E> getShortestPath(Task<G, V, E> task) {
-        maxEdgesPerThread = task.getGraph().getEdgeCount() - DESIRED_SUB_TASKS;
+        maxEdgesPerThread = Math.max(EASY_GRAPH_SIZE, task.getGraph().getEdgeCount() - DESIRED_SUB_TASKS);
         Collection<SubTask> subTasks = generateSubTasks(new SubTask(task, new ArrayList<>()));
         System.out.format("%s subTasks have been generated\n", subTasks.size());
         AtomicInteger sequence = new AtomicInteger(1);
@@ -77,7 +78,7 @@ public class ConcurrencyShortestPathFinder<G extends Graph<V, E>, V, E> implemen
         return subTask.getPath();
     }
 
-    class SubTask {
+    private class SubTask {
         private Task<G, V, E> task;
         private List<E> path;
         private int id;

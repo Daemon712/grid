@@ -12,6 +12,7 @@ public class GraphUtils {
     @SuppressWarnings("unchecked")
     public static <G extends Graph<V, E>, V, E> G clone(G graph) {
         G clone = newInstance(graph);
+        graph.getVertices().forEach(clone::addVertex);
         graph.getEdges().forEach(edge -> clone.addEdge(edge, graph.getIncidentVertices(edge)));
         return clone;
     }
@@ -23,11 +24,6 @@ public class GraphUtils {
         } catch (InstantiationException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public long expectedExecutionTime(int vertices){
-        //Empirical function
-        return Math.round(1.6869 * Math.exp(0.1665 * vertices));
     }
 
     static <G extends Graph<V, E>, V, E> String graphToString(G graph){
