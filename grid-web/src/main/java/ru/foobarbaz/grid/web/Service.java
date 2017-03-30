@@ -1,10 +1,9 @@
 package ru.foobarbaz.grid.web;
 
+import ru.foobarbaz.grid.broker.GridShortestPathFinder;
 import ru.foobarbaz.grid.entity.Edge;
 import ru.foobarbaz.grid.entity.Task;
-import ru.foobarbaz.grid.logic.ConcurrencyShortestPathFinder;
 import ru.foobarbaz.grid.logic.ShortestPathFinder;
-import ru.foobarbaz.grid.logic.SimpleShortestPathFinder;
 import ru.foobarbaz.grid.transport.PathSerializer;
 import ru.foobarbaz.grid.transport.TaskDeserializer;
 import ru.foobarbaz.grid.transport.TransportConfig;
@@ -15,14 +14,18 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
+import static com.google.common.base.Throwables.getRootCause;
 import static javax.ws.rs.core.Response.Status.*;
 
 @Path("api")
 public class Service {
-    private ShortestPathFinder pathFinder = new ConcurrencyShortestPathFinder(new SimpleShortestPathFinder());
+    private ShortestPathFinder pathFinder = new GridShortestPathFinder<>();
     private TaskDeserializer taskDeserializer = TransportConfig.getTaskDeserializer();
     private PathSerializer pathSerializer = TransportConfig.getPathSerializer();
     private Comparator<List<Edge>> comparator =
@@ -37,12 +40,26 @@ public class Service {
             Task task = taskDeserializer.apply(serializedTask);
             task.setPathComparator(comparator);
             List path = pathFinder.getShortestPath(task);
+            if (path == null) return Response.status(NO_CONTENT).entity("Path not found").build();
+
             String serializedPath = pathSerializer.apply(task.getGraph(), path);
             return Response.status(OK).entity(serializedPath).build();
         } catch (RuntimeException e) {
-            return Response.status(BAD_REQUEST).build();
+            Throwable rootCause = getRootCause(e);
+            Response.Status status = rootCause instanceof RuntimeException ?
+                    BAD_REQUEST : INTERNAL_SERVER_ERROR;
+            return Response.status(status).entity(formatException(rootCause)).build();
         } catch (Exception e){
-            return Response.status(INTERNAL_SERVER_ERROR).build();
+            Throwable rootCause = getRootCause(e);
+            return Response.status(INTERNAL_SERVER_ERROR).entity(formatException(rootCause)).build();
         }
+    }
+
+    private String formatException(Throwable e){
+        return e.toString() + "\n\n" +
+                Arrays.stream(e.getStackTrace())
+                        .limit(5)
+                        .map(Objects::toString)
+                        .collect(Collectors.joining("\n"));
     }
 }

@@ -17,7 +17,8 @@ public class TaskDeserializer<G extends Graph<V, E>, V, E> implements Function<S
         Task<G, V, E> task = new Task<>();
 
         int delimiter = s.indexOf("\n\n");
-        task.setGraph(graphDeserializer.apply(s.substring(0, delimiter)));
+        String graph = delimiter == -1 ? "" : s.substring(0, delimiter);
+        task.setGraph(graphDeserializer.apply(graph));
 
         String[] vertexLine = s.substring(delimiter + 2).split(" ");
         task.setSource(graphDeserializer.getVertexDeserializer().apply(vertexLine[0]));
