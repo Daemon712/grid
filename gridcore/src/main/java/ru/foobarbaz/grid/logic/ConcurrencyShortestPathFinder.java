@@ -3,15 +3,13 @@ package ru.foobarbaz.grid.logic;
 import edu.uci.ics.jung.graph.Graph;
 import ru.foobarbaz.grid.entity.Task;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
-public class ConcurrencyShortestPathFinder<G extends Graph<V, E>, V, E> implements ShortestPathFinder<G, V, E> {
-    private static final int DESIRED_SUB_TASKS = 8;
-    private static final int EASY_GRAPH_SIZE = 16;
-    private ShortestPathFinder<G, V, E> simpleShortestPathFinder;
-    private int maxEdgesPerThread;
+public class ConcurrencyShortestPathFinder<G extends Graph<V, E>, V, E> extends AbstractDistributedPathFinder<G, V, E> {
+    private final ShortestPathFinder<G, V, E> simpleShortestPathFinder;
 
     public ConcurrencyShortestPathFinder(ShortestPathFinder<G, V, E> simpleShortestPathFinder) {
         this.simpleShortestPathFinder = simpleShortestPathFinder;
@@ -19,8 +17,7 @@ public class ConcurrencyShortestPathFinder<G extends Graph<V, E>, V, E> implemen
 
     @Override
     public List<E> getShortestPath(Task<G, V, E> task) {
-        maxEdgesPerThread = Math.max(EASY_GRAPH_SIZE, task.getGraph().getEdgeCount() - DESIRED_SUB_TASKS);
-        Collection<SubTask> subTasks = generateSubTasks(new SubTask(task, new ArrayList<>()));
+        Collection<SubTask<G, V, E>> subTasks = generateSubTasks(task);
         System.out.format("%s subTasks have been generated\n", subTasks.size());
         AtomicInteger sequence = new AtomicInteger(1);
         return subTasks.parallelStream()
@@ -29,40 +26,6 @@ public class ConcurrencyShortestPathFinder<G extends Graph<V, E>, V, E> implemen
                 .filter(Objects::nonNull)
                 .min(task.getPathComparator())
                 .orElse(null);
-    }
-
-
-    private Collection<SubTask> generateSubTasks(SubTask subTask) {
-        if (subTask.getTask().getGraph().getEdgeCount() <= maxEdgesPerThread)
-            return Collections.singleton(subTask);
-
-        return subTask.getTask().getGraph().getOutEdges(subTask.getTask().getSource())
-                .stream()
-                .map(step -> createSubTask(subTask, step))
-                .flatMap(newSubTask -> generateSubTasks(newSubTask).stream())
-                .collect(Collectors.toList());
-    }
-
-
-    private SubTask createSubTask(SubTask originalSubTask, E step) {
-        Task<G, V, E> originalTask = originalSubTask.getTask();
-        V newSource = originalTask.getGraph().getOpposite(originalTask.getSource(), step);
-
-        G subGraph;
-        if (newSource.equals(originalTask.getTarget())){
-            subGraph = GraphUtils.newInstance(originalTask.getGraph());
-        } else {
-            subGraph = GraphUtils.clone(originalTask.getGraph());
-            subGraph.removeVertex(originalTask.getSource());
-        }
-
-        Task<G, V, E> newTask = originalTask.clone();
-        newTask.setGraph(subGraph);
-        newTask.setSource(newSource);
-
-        List<E> newPath = new ArrayList<>(originalSubTask.getPath());
-        newPath.add(step);
-        return new SubTask(newTask, newPath);
     }
 
     private List<E> completeTask(SubTask subTask){
@@ -76,32 +39,5 @@ public class ConcurrencyShortestPathFinder<G extends Graph<V, E>, V, E> implemen
         subTask.getPath().addAll(shortestPath);
         System.out.format("SubTask #%s completed. Path size: %s\n", subTask.getId(), subTask.getPath().size());
         return subTask.getPath();
-    }
-
-    private class SubTask {
-        private Task<G, V, E> task;
-        private List<E> path;
-        private int id;
-
-        SubTask(Task<G, V, E> task, List<E> path) {
-            this.task = task;
-            this.path = path;
-        }
-
-        Task<G, V, E> getTask() {
-            return task;
-        }
-
-        List<E> getPath() {
-            return path;
-        }
-
-        int getId() {
-            return id;
-        }
-
-        void setId(int id) {
-            this.id = id;
-        }
     }
 }
