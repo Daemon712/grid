@@ -9,9 +9,9 @@
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
     <modules>
-        <module>gridworker</module>
-        <module>gridcore</module>
-        <module>gridui</module>
+        <module>grid-worker</module>
+        <module>grid-core</module>
+        <module>grid-ui</module>
         <module>grid-web</module>
     </modules>
 </project>
