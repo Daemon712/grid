@@ -48,8 +48,9 @@ public class Controller {
     private static final int SIZE = 1000;
     private VisualizationImageServer<Integer, Edge> visualizationImageServer;
     private DirectedGraph<Integer, Edge> graph;
-    private ConcurrencyShortestPathFinder<DirectedGraph<Integer, Edge>, Integer, Edge> pathFinder =
-            new ConcurrencyShortestPathFinder<>(new SimpleShortestPathFinder<>());
+    private ShortestPathFinder<DirectedGraph<Integer, Edge>, Integer, Edge> pathFinder =
+            new GridClientPathFinder();
+//            new ConcurrencyShortestPathFinder<>(new SimpleShortestPathFinder<>());
 
     private ToIntFunction<List<Edge>> pathLengthFunction = path -> path.stream().mapToInt(Edge::getWeight).sum();
     private Comparator<List<Edge>> comparator = Comparator.comparingInt(pathLengthFunction);
@@ -84,6 +85,7 @@ public class Controller {
         } catch (Exception e){
             alert("Error during de-serializing data");
             e.printStackTrace();
+            return;
         }
 
         source = 1;
@@ -135,6 +137,7 @@ public class Controller {
             graph = GraphGenerator.generateDirectedGraph(vertices);
         } catch (NumberFormatException e){
             alert("Incorrect number format!");
+            return;
         }
 
         source = 1;
@@ -155,11 +158,13 @@ public class Controller {
             target = Integer.valueOf(targetField.getText());
         }  catch (NumberFormatException e){
             alert("Incorrect number format!");
+            return;
         }
         if (source == null || target == null) return;
 
         if (!graph.getVertices().contains(source) || !graph.getVertices().contains(target)) {
-            alert("Specified vertices doesn't exist!"); return;
+            alert("Specified vertices doesn't exist!");
+            return;
         }
 
         startTime = System.currentTimeMillis();
