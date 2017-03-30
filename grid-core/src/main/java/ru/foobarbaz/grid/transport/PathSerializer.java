@@ -19,6 +19,8 @@ public class PathSerializer<G extends Graph<V, E>, V, E> implements BiFunction<G
 
     @Override
     public String apply(G graph, List<E> edgesPath) {
+        if (edgesPath == null || edgesPath.isEmpty()) return "";
+
         Stream.Builder<V> pathBuilder = Stream.builder();
 
         pathBuilder.add(graph.getEndpoints(edgesPath.get(0)).getFirst());

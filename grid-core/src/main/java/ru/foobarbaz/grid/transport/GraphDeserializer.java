@@ -29,6 +29,8 @@ public class GraphDeserializer<G extends Graph<V, E>, V ,E> implements Function<
         for (String line : s.split("\n")) {
             String[] args = line.split(" ");
 
+            if (args.length < 3) continue;
+
             V vertex1 = vertexDeserializer.apply(args[0]);
             V vertex2 = vertexDeserializer.apply(args[1]);
             E edge = edgeDeserializer.apply(args[2]);

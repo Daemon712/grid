@@ -16,6 +16,8 @@ public class PathDeserializer<G extends Graph<V, E>, V, E> implements BiFunction
 
     @Override
     public List<E> apply(G graph, String path) {
+        if(path == null || path.trim().isEmpty()) return new ArrayList<>();
+
         String[] vertices = path.split(" ");
         List<E> edgesPath = new ArrayList<>(vertices.length + 1);
 
