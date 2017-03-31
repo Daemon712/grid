@@ -1,5 +1,6 @@
 package ru.foobarbaz.grid.web;
 
+import edu.uci.ics.jung.graph.DirectedGraph;
 import ru.foobarbaz.grid.broker.GridShortestPathFinder;
 import ru.foobarbaz.grid.entity.Edge;
 import ru.foobarbaz.grid.entity.Task;
@@ -25,9 +26,12 @@ import static javax.ws.rs.core.Response.Status.*;
 
 @Path("api")
 public class Service {
-    private ShortestPathFinder pathFinder = new GridShortestPathFinder<>();
-    private TaskDeserializer taskDeserializer = TransportConfig.getTaskDeserializer();
-    private PathSerializer pathSerializer = TransportConfig.getPathSerializer();
+    private ShortestPathFinder<DirectedGraph<Integer, Edge>, Integer, Edge> pathFinder = new GridShortestPathFinder<>(
+            TransportConfig.getTaskSerializer(),
+            TransportConfig.getPathDeserializer()
+    );
+    private TaskDeserializer<DirectedGraph<Integer, Edge>, Integer, Edge> taskDeserializer = TransportConfig.getTaskDeserializer();
+    private PathSerializer<DirectedGraph<Integer, Edge>, Integer, Edge> pathSerializer = TransportConfig.getPathSerializer();
     private Comparator<List<Edge>> comparator =
             Comparator.comparingInt(path -> path.stream().mapToInt(Edge::getWeight).sum());
 
@@ -37,9 +41,10 @@ public class Service {
     @Consumes(MediaType.TEXT_PLAIN)
     public Response findPath(String serializedTask){
         try {
-            Task task = taskDeserializer.apply(serializedTask);
+            Task<DirectedGraph<Integer, Edge>, Integer, Edge> task =
+                    taskDeserializer.apply(serializedTask);
             task.setPathComparator(comparator);
-            List path = pathFinder.getShortestPath(task);
+            List<Edge> path = pathFinder.getShortestPath(task);
             if (path == null) return Response.status(NO_CONTENT).entity("Path not found").build();
 
             String serializedPath = pathSerializer.apply(task.getGraph(), path);

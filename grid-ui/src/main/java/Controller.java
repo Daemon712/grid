@@ -49,7 +49,11 @@ public class Controller {
     private VisualizationImageServer<Integer, Edge> visualizationImageServer;
     private DirectedGraph<Integer, Edge> graph;
     private ShortestPathFinder<DirectedGraph<Integer, Edge>, Integer, Edge> pathFinder =
-            new GridClientPathFinder();
+            new GridClientPathFinder<>(
+                    "http://foobarbaz.ru:8080/grid-web/api/",
+                    TransportConfig.getTaskSerializer(),
+                    TransportConfig.getPathDeserializer()
+            );
 //            new ConcurrencyShortestPathFinder<>(new SimpleShortestPathFinder<>());
 
     private ToIntFunction<List<Edge>> pathLengthFunction = path -> path.stream().mapToInt(Edge::getWeight).sum();

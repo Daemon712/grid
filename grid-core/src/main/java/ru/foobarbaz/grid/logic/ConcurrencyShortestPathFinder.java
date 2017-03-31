@@ -28,7 +28,7 @@ public class ConcurrencyShortestPathFinder<G extends Graph<V, E>, V, E> extends 
                 .orElse(null);
     }
 
-    private List<E> completeTask(SubTask subTask){
+    private List<E> completeTask(SubTask<G, V, E> subTask){
         List<E> shortestPath = simpleShortestPathFinder.getShortestPath(subTask.getTask());
 
         if (shortestPath == null) {

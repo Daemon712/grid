@@ -1,3 +1,5 @@
+import edu.uci.ics.jung.graph.DirectedGraph;
+import edu.uci.ics.jung.graph.Graph;
 import ru.foobarbaz.grid.entity.Edge;
 import ru.foobarbaz.grid.entity.Task;
 import ru.foobarbaz.grid.logic.SimpleShortestPathFinder;
@@ -12,24 +14,40 @@ import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.List;
 
-public class Program {
-    private final static SimpleShortestPathFinder pathFinder = new SimpleShortestPathFinder();
-    private final static TaskDeserializer taskDeserializer = TransportConfig.getTaskDeserializer();
-    private final static PathSerializer pathSerializer = TransportConfig.getPathSerializer();
+public class Program<G extends Graph<V, E>, V, E>  {
+    private final SimpleShortestPathFinder<G, V, E> pathFinder;
+    private final TaskDeserializer<G, V, E> taskDeserializer;
+    private final PathSerializer<G, V, E> pathSerializer;
+    private final Comparator<List<E>> comparator;
 
-    private final static Comparator<List<Edge>> comparator =
-            Comparator.comparingInt(path -> path.stream().mapToInt(Edge::getWeight).sum());
+    public Program(SimpleShortestPathFinder<G, V, E> pathFinder,
+                   TaskDeserializer<G, V, E> taskDeserializer,
+                   PathSerializer<G, V, E> pathSerializer,
+                   Comparator<List<E>> comparator) {
+        this.pathFinder = pathFinder;
+        this.taskDeserializer = taskDeserializer;
+        this.pathSerializer = pathSerializer;
+        this.comparator = comparator;
+    }
 
-    public static void main(String[] args) throws IOException {
-        Path inputFile = Paths.get(args[0]);
+    private void run(Path inputFile, Path outputFile) throws IOException{
         String taskSerialized = new String(Files.readAllBytes(inputFile));
-        Task task = taskDeserializer.apply(taskSerialized);
+        Task<G, V, E> task = taskDeserializer.apply(taskSerialized);
 
         task.setPathComparator(comparator);
-        List path = pathFinder.getShortestPath(task);
+        List<E> path = pathFinder.getShortestPath(task);
 
         String pathSerialized = pathSerializer.apply(task.getGraph(), path);
-        Path outputFile = Paths.get(args[1]);
         Files.write(outputFile, pathSerialized.getBytes());
+    }
+
+    public static void main(String[] args) throws IOException {
+        Program<DirectedGraph<Integer, Edge>, Integer, Edge> program = new Program<>(
+                new SimpleShortestPathFinder<>(),
+                TransportConfig.getTaskDeserializer(),
+                TransportConfig.getPathSerializer(),
+                Comparator.comparingInt(path -> path.stream().mapToInt(Edge::getWeight).sum())
+        );
+        program.run(Paths.get(args[0]), Paths.get(args[1]));
     }
 }

@@ -1,3 +1,4 @@
+import edu.uci.ics.jung.graph.Graph;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -6,7 +7,6 @@ import ru.foobarbaz.grid.entity.Task;
 import ru.foobarbaz.grid.logic.ShortestPathFinder;
 import ru.foobarbaz.grid.transport.PathDeserializer;
 import ru.foobarbaz.grid.transport.TaskSerializer;
-import ru.foobarbaz.grid.transport.TransportConfig;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -14,14 +14,20 @@ import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class GridClientPathFinder implements ShortestPathFinder {
+public class GridClientPathFinder<G extends Graph<V, E>, V ,E> implements ShortestPathFinder<G, V, E> {
 
-    private static final String SERVER_URL = "http://foobarbaz.ru:8080/grid-web/api/";
-    private TaskSerializer taskSerializer = TransportConfig.getTaskSerializer();
-    private PathDeserializer pathDeserializer = TransportConfig.getPathDeserializer();
+    private final String serverUrl;
+    private final TaskSerializer<G, V, E> taskSerializer;
+    private final PathDeserializer<G, V, E> pathDeserializer;
+
+    public GridClientPathFinder(String serverUrl, TaskSerializer<G, V, E> taskSerializer, PathDeserializer<G, V, E> pathDeserializer) {
+        this.serverUrl = serverUrl;
+        this.taskSerializer = taskSerializer;
+        this.pathDeserializer = pathDeserializer;
+    }
 
     @Override
-    public List getShortestPath(Task task) {
+    public List<E> getShortestPath(Task<G, V, E> task) {
         String taskStr = taskSerializer.apply(task);
         String pathStr = callService(taskStr);
         return pathStr == null ? null : pathDeserializer.apply(task.getGraph(), pathStr);
@@ -30,7 +36,7 @@ public class GridClientPathFinder implements ShortestPathFinder {
     private String callService(String request){
         try {
             DefaultHttpClient httpClient = new DefaultHttpClient();
-            HttpPost postRequest = new HttpPost(SERVER_URL);
+            HttpPost postRequest = new HttpPost(serverUrl);
             postRequest.setEntity(new StringEntity(request));
 
             System.out.println("Post request:\n" + request);

@@ -6,7 +6,6 @@ import ru.foobarbaz.grid.logic.AbstractDistributedPathFinder;
 import ru.foobarbaz.grid.logic.SubTask;
 import ru.foobarbaz.grid.transport.PathDeserializer;
 import ru.foobarbaz.grid.transport.TaskSerializer;
-import ru.foobarbaz.grid.transport.TransportConfig;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -29,7 +28,7 @@ public class GridShortestPathFinder<G extends Graph<V, E>, V, E> extends Abstrac
     private static final String TASK_FILE_NAME_TEMPLATE = "task-%04d.data";
     private static final String JOB_DESCRIPTION = "job :\n\tlabel : ShortestPathFinder";
 
-    private static final Pattern JOB_ID_PATTERN = Pattern.compile("\\[(\\d+)\\]");
+    private static final Pattern JOB_ID_PATTERN = Pattern.compile("\\[(\\d+)]");
     private static final Pattern TASK_ID_PATTERN = Pattern.compile(".*task-(\\d+)\\.data");
 
     private static final Collection<String> REQUIRED_JARS = Arrays.asList(
@@ -40,8 +39,13 @@ public class GridShortestPathFinder<G extends Graph<V, E>, V, E> extends Abstrac
             "jung-graph-impl-2.1.1.jar"
     );
 
-    private final TaskSerializer taskSerializer = TransportConfig.getTaskSerializer();
-    private final PathDeserializer pathDeserializer = TransportConfig.getPathDeserializer();
+    private final TaskSerializer<G, V, E> taskSerializer;
+    private final PathDeserializer<G, V, E> pathDeserializer;
+
+    public GridShortestPathFinder(TaskSerializer<G, V, E> taskSerializer, PathDeserializer<G, V, E> pathDeserializer) {
+        this.taskSerializer = taskSerializer;
+        this.pathDeserializer = pathDeserializer;
+    }
 
     @Override
     public List<E> getShortestPath(Task<G, V, E> task) {
@@ -76,11 +80,15 @@ public class GridShortestPathFinder<G extends Graph<V, E>, V, E> extends Abstrac
 
         List<List<E>> paths = new ArrayList<>(subTasks.size());
         for (int i = 0; i < subTasks.size(); i++) {
-            SubTask subTask = subTasks.get(i);
-            Graph graph = subTask.getTask().getGraph();
+            SubTask<G, V, E> subTask = subTasks.get(i);
+            G graph = subTask.getTask().getGraph();
             List<E> computedPath = pathDeserializer.apply(graph, results.get(i));
-            subTask.getPath().addAll(computedPath);
-            paths.add(subTask.getPath());
+            if (computedPath == null){
+                paths.add(null);
+            } else {
+                subTask.getPath().addAll(computedPath);
+                paths.add(subTask.getPath());
+            }
         }
         return paths;
     }
@@ -93,7 +101,7 @@ public class GridShortestPathFinder<G extends Graph<V, E>, V, E> extends Abstrac
         String[] result = new String[files.length];
         for (Path path : files){
             Matcher matcher = TASK_ID_PATTERN.matcher(path.toString());
-            matcher.find();
+            if (!matcher.find()) continue;
             Integer taskId = Integer.valueOf(matcher.group(1));
 
             String taskResult = new String(Files.readAllBytes(path));
@@ -106,11 +114,11 @@ public class GridShortestPathFinder<G extends Graph<V, E>, V, E> extends Abstrac
 
     private void runJob(Path inputDir) throws IOException, InterruptedException {
         String addResult = executeCommand(MY_GRID + " addjob " +  inputDir.resolve(JOB_FILE_NAME));
-        if (!addResult.contains("Job successfully added"))
+        Matcher matcher = JOB_ID_PATTERN.matcher(addResult);
+
+        if (!addResult.contains("Job successfully added") || !matcher.find())
             throw new RuntimeException("Job failed with error: " + addResult);
 
-        Matcher matcher = JOB_ID_PATTERN.matcher(addResult);
-        matcher.find();
         String jobId = matcher.group(1);
 
         String waitResult = executeCommand(MY_GRID + " waitforjob " + jobId);
@@ -131,7 +139,7 @@ public class GridShortestPathFinder<G extends Graph<V, E>, V, E> extends Abstrac
         }
     }
 
-    private String writeSubTaskFile(Path inputDir, SubTask subTask){
+    private String writeSubTaskFile(Path inputDir, SubTask<G, V, E> subTask){
         try {
             String taskBody = taskSerializer.apply(subTask.getTask());
             String fileName = String.format(TASK_FILE_NAME_TEMPLATE, subTask.getId());

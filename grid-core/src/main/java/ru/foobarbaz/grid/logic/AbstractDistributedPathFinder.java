@@ -14,7 +14,7 @@ public abstract class AbstractDistributedPathFinder<G extends Graph<V, E>, V, E>
 
     protected List<SubTask<G, V, E>> generateSubTasks(Task<G, V, E> task) {
         int edgesLimit = Math.max(EASY_GRAPH_SIZE, task.getGraph().getEdgeCount() - DESIRED_SUB_TASKS);
-        List<SubTask<G, V, E>> subTasks = generateSubTasks(new SubTask(task, new ArrayList<>()), edgesLimit);
+        List<SubTask<G, V, E>> subTasks = generateSubTasks(new SubTask<>(task, new ArrayList<>()), edgesLimit);
         System.out.format("%s subTasks have been generated\n", subTasks.size());
         for (int i = 0; i < subTasks.size(); i++) subTasks.get(i).setId(i);
         return subTasks;
@@ -32,7 +32,7 @@ public abstract class AbstractDistributedPathFinder<G extends Graph<V, E>, V, E>
                 .collect(Collectors.toList());
     }
 
-    protected SubTask<G, V, E> createSubTask(SubTask originalSubTask, E step) {
+    protected SubTask<G, V, E> createSubTask(SubTask<G, V, E> originalSubTask, E step) {
         Task<G, V, E> originalTask = originalSubTask.getTask();
         V newSource = originalTask.getGraph().getOpposite(originalTask.getSource(), step);
 
